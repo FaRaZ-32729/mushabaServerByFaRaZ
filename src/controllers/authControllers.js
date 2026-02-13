@@ -170,7 +170,7 @@ const regenerateOtp = async (req, res) => {
             return res.status(400).json({ message: "User already verified" });
         }
 
-        // 🔒 Optional: prevent spam (only allow after expiry)
+        // Optional: prevent spam (only allow after expiry)
         if (user.otpExpires && user.otpExpires > new Date()) {
             return res.status(400).json({
                 message: "OTP still valid. Please wait before requesting new one.",
@@ -268,11 +268,18 @@ const loginUser = async (req, res) => {
         const token = jwt.sign(
             {
                 id: user._id,
-                role: user.role,
             },
             process.env.JWT_SECRET,
             { expiresIn: "7d" } // mobile apps usually longer expiry
         );
+
+        // Set JWT in HTTP-only cookie
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
 
         res.status(200).json({
             success: true,
@@ -290,21 +297,21 @@ const loginUser = async (req, res) => {
     }
 };
 
-// Register/login with Google
+// Register with Google
 const registerByGoogle = async (req, res) => {
     try {
         const { token, phone, nationality } = req.body;
 
+        // 1️⃣ Validate required fields
         if (!token || !phone || !nationality) {
             return res.status(400).json({ message: "Token, phone, and nationality are required!" });
         }
 
-        // Validate phone
         if (!validatePhone(phone)) {
             return res.status(400).json({ message: "Invalid phone number!" });
         }
 
-        // Verify token
+        // 2️⃣ Verify Google token
         const ticket = await client.verifyIdToken({
             idToken: token,
             audience: process.env.GOOGLE_CLIENT_ID,
@@ -313,25 +320,95 @@ const registerByGoogle = async (req, res) => {
         const payload = ticket.getPayload();
         const { sub: googleId, email, name, picture } = payload;
 
-        // Check if user exists
-        let user = await userModel.findOne({ googleId });
-        if (!user) {
-            user = await userModel.create({
-                name,
-                email,
-                googleId,
-                provider: "google",
-                phone,
-                nationality,
-                image: picture,
-                isVerified: true,
+        // 3️⃣ Check if user already exists
+        const existingUser = await userModel.findOne({ googleId });
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: "User already registered. Please log in instead.",
             });
         }
 
-        res.status(200).json({ message: "User registered successfully!", user });
+        // 4️⃣ Create new user
+        const user = await userModel.create({
+            name,
+            email,
+            googleId,
+            provider: "google",
+            phone,
+            nationality,
+            image: picture,
+            isVerified: true,
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "User registered successfully via Google!",
+            user,
+        });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Server Error" });
+        console.error("Google Registration Error:", error.message);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+
+// login with Google
+const googleLogin = async (req, res) => {
+    try {
+        const { idToken } = req.body;
+
+        if (!idToken) {
+            return res.status(400).json({ success: false, message: "ID token required" });
+        }
+
+        // 1️⃣ Verify ID token with Google
+        const ticket = await client.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        const { sub, email, name, picture } = payload;
+
+        // 2️⃣ Find or Create User
+        let user = await userModel.findOne({ googleId: sub });
+
+        if (!user) {
+            // Create new user
+            user = await userModel.create({
+                name,
+                email,
+                provider: "google",
+                googleId: sub,
+                image: picture,
+                isVerified: true, // Google accounts are verified
+            });
+        }
+
+        // 3️⃣ Generate JWT for your app
+        const token = jwt.sign(
+            { id: user._id, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: "7d" }
+        );
+
+        // 4️⃣ Set JWT in cookie for Postman/testing
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Google login successful",
+            token,
+            user,
+        });
+    } catch (error) {
+        console.error("Google Login Error:", error.message);
+        res.status(500).json({ success: false, message: "Server error" });
     }
 };
 
