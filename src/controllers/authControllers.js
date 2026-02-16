@@ -115,11 +115,11 @@ const registerUser = async (req, res) => {
 
         const user = await userModel.create(newUser);
 
-        res.status(201).json({ message: "User registered & email send successfully!", user });
+        return res.status(201).json({ message: "User registered & email send successfully!", user });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Server Error" });
+        return res.status(500).json({ message: "Server Error" });
     }
 };
 
@@ -144,10 +144,10 @@ const verifyOtp = async (req, res) => {
         user.otpExpires = null;
         await user.save();
 
-        res.status(200).json({ message: "User verified successfully!", token });
+        return res.status(200).json({ message: "User verified successfully!", token });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Server Error" });
+        return res.status(500).json({ message: "Server Error" });
     }
 };
 
@@ -197,13 +197,13 @@ const regenerateOtp = async (req, res) => {
             `
         );
 
-        res.status(200).json({
+        return res.status(200).json({
             message: "New OTP sent successfully!",
         });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Server Error" });
+        return res.status(500).json({ message: "Server Error" });
     }
 };
 
@@ -281,7 +281,7 @@ const loginUser = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Login successful",
             token,
@@ -290,7 +290,7 @@ const loginUser = async (req, res) => {
 
     } catch (error) {
         console.error("Login Error:", error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server Error",
         });
@@ -341,14 +341,14 @@ const registerByGoogle = async (req, res) => {
             isVerified: true,
         });
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             message: "User registered successfully via Google!",
             user,
         });
     } catch (error) {
         console.error("Google Registration Error:", error.message);
-        res.status(500).json({ success: false, message: "Server Error" });
+        return res.status(500).json({ success: false, message: "Server Error" });
     }
 };
 
@@ -400,7 +400,7 @@ const googleLogin = async (req, res) => {
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "Google login successful",
             token,
@@ -408,7 +408,7 @@ const googleLogin = async (req, res) => {
         });
     } catch (error) {
         console.error("Google Login Error:", error.message);
-        res.status(500).json({ success: false, message: "Server error" });
+        return res.status(500).json({ success: false, message: "Server error" });
     }
 };
 

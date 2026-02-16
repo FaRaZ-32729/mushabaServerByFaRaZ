@@ -157,7 +157,7 @@ const deleteUser = async (req, res) => {
 
     } catch (error) {
         console.error("DeleteUser Error:", error.message);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server Error",
         });

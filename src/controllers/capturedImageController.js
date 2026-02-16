@@ -1,9 +1,9 @@
 const path = require("path");
-const mongoose = require("mongoose");
-const userModel = require("../models/userModel");
 const capturedImageModel = require("../models/capturedImageModel");
 const bucket = require("../config/firebaseAdmin");
 
+
+// upload image
 const uploadCapturedImage = async (req, res) => {
     try {
         if (!req.file) {
@@ -53,7 +53,7 @@ const uploadCapturedImage = async (req, res) => {
             imageName: fileName,
         });
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             message: "Image uploaded successfully",
             image,
@@ -61,11 +61,113 @@ const uploadCapturedImage = async (req, res) => {
 
     } catch (error) {
         console.error("Firebase Upload Error:", error);
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Server Error",
         });
     }
 };
 
-module.exports = { uploadCapturedImage };
+// get all images of logged in user
+const getAllImagesByUser = async (req, res) => {
+    try {
+        const userId = req.user._id.toString(); // Authenticated user
+
+        const images = await capturedImageModel
+            .find({ user: userId })
+            .sort({ createdAt: -1 }); // latest first
+
+        if (!images) {
+            return res.status(404).json({ success: false, message: "No images found for this user" })
+        }
+
+        return res.status(200).json({
+            success: true,
+            totalImages: images.length,
+            images,
+        });
+    } catch (error) {
+        console.error("GetAllImages Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error",
+        });
+    }
+};
+
+// get recent image of logged in user
+const getRecentImageByUser = async (req, res) => {
+    try {
+        const userId = req.user._id.toString();
+
+        const recentImage = await capturedImageModel
+            .findOne({ user: userId })
+            .sort({ createdAt: -1 }); // latest first
+
+        if (!recentImage) {
+            return res.status(404).json({
+                success: false,
+                message: "No image found for this user",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            image: recentImage,
+        });
+    } catch (error) {
+        console.error("GetRecentImage Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error",
+        });
+    }
+};
+
+// delete image 
+const deleteCapturedImage = async (req, res) => {
+    try {
+        const userId = req.user._id.toString();
+        const { imageId } = req.params; // Pass image _id in URL
+
+        // Find image in MongoDB
+        const image = await capturedImageModel.findById(imageId);
+
+        if (!image) {
+            return res.status(404).json({
+                success: false,
+                message: "Image not found",
+            });
+        }
+
+        // Make sure the logged-in user owns this image
+        if (image.user.toString() !== userId) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not allowed to delete this image",
+            });
+        }
+
+        // Delete file from Firebase Storage
+        const file = bucket.file(image.imageName); // the path saved in MongoDB
+        await file.delete(); // deletes from Firebase
+
+        // Delete from MongoDB
+        await capturedImageModel.findByIdAndDelete(imageId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Image deleted successfully",
+        });
+
+    } catch (error) {
+        console.error("Delete Image Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server Error",
+        });
+    }
+};
+
+
+module.exports = { uploadCapturedImage, getAllImagesByUser, getRecentImageByUser, deleteCapturedImage };
