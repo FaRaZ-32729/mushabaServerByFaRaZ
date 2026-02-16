@@ -1,11 +1,11 @@
 const express = require("express");
 const authUser = require("../middleware/authMiddleware");
-const uploadImage = require("../middleware/uploadImageMiddleware");
 const { uploadCapturedImage } = require("../controllers/capturedImageController");
+const uploadImage = require("../middleware/uploadImageMiddleware");
 const router = express.Router();
 
 router.post(
-    "/upload-image",
+    "/upload",
     authUser,
     uploadImage.single("image"),
     uploadCapturedImage
