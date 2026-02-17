@@ -131,7 +131,6 @@ const uploadCapturedImage = async (req, res) => {
     }
 };
 
-
 // get all images of logged in user
 const getAllImagesByUser = async (req, res) => {
     try {

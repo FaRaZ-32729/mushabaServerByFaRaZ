@@ -1,7 +1,6 @@
 const path = require("path");
 const capturedVideoModel = require("../models/capturedVideoModel"); // create similar to images
 const bucket = require("../config/firebaseAdmin");
-
 const fs = require("fs");
 const ffmpeg = require("fluent-ffmpeg");
 const os = require("os");
