@@ -1,7 +1,73 @@
 const path = require("path");
+const sharp = require("sharp");
 const capturedImageModel = require("../models/capturedImageModel");
 const bucket = require("../config/firebaseAdmin");
 
+
+// upload image
+// const uploadCapturedImage = async (req, res) => {
+//     try {
+//         if (!req.file) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "No image uploaded",
+//             });
+//         }
+
+//         // Validate image type
+//         const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+//         if (!allowedTypes.includes(req.file.mimetype)) {
+//             return res.status(400).json({
+//                 success: false,
+//                 message: "Only JPG, PNG, and WEBP images are allowed",
+//             });
+//         }
+
+//         const userId = req.user._id.toString();
+//         const timestamp = Date.now();
+//         const ext = path.extname(req.file.originalname);
+
+//         // New folder structure
+//         const fileName = `mushaba/capturedImages/${userId}-${timestamp}${ext}`;
+
+//         const file = bucket.file(fileName);
+
+//         await file.save(req.file.buffer, {
+//             metadata: {
+//                 contentType: req.file.mimetype,
+//             },
+//         });
+
+//         // No makePublic()
+//         // Generate signed URL (private access)
+//         // const [signedUrl] = await file.getSignedUrl({
+//         //     action: "read",
+//         //     expires: "03-01-2035", // long-term access
+//         // });
+
+//         await file.makePublic();
+//         const imageUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+
+//         const image = await capturedImageModel.create({
+//             user: userId,
+//             imageUrl,
+//             imageName: fileName,
+//         });
+
+//         return res.status(201).json({
+//             success: true,
+//             message: "Image uploaded successfully",
+//             image,
+//         });
+
+//     } catch (error) {
+//         console.error("Firebase Upload Error:", error);
+//         return res.status(500).json({
+//             success: false,
+//             message: "Server Error",
+//         });
+//     }
+// };
 
 // upload image
 const uploadCapturedImage = async (req, res) => {
@@ -13,7 +79,6 @@ const uploadCapturedImage = async (req, res) => {
             });
         }
 
-        // Validate image type
         const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
         if (!allowedTypes.includes(req.file.mimetype)) {
             return res.status(400).json({
@@ -24,27 +89,25 @@ const uploadCapturedImage = async (req, res) => {
 
         const userId = req.user._id.toString();
         const timestamp = Date.now();
-        const ext = path.extname(req.file.originalname);
 
-        // New folder structure
-        const fileName = `mushaba/capturedImages/${userId}-${timestamp}${ext}`;
+        // Compress Image Using Sharp
+        const compressedBuffer = await sharp(req.file.buffer)
+            .resize({ width: 512, withoutEnlargement: true })
+            .jpeg({ quality: 20 })
+            .toBuffer();
+
+        const fileName = `mushaba/capturedImages/${userId}-${timestamp}.jpg`;
 
         const file = bucket.file(fileName);
 
-        await file.save(req.file.buffer, {
+        await file.save(compressedBuffer, {
             metadata: {
-                contentType: req.file.mimetype,
+                contentType: "image/jpeg",
             },
         });
 
-        // No makePublic()
-        // Generate signed URL (private access)
-        // const [signedUrl] = await file.getSignedUrl({
-        //     action: "read",
-        //     expires: "03-01-2035", // long-term access
-        // });
-
         await file.makePublic();
+
         const imageUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
         const image = await capturedImageModel.create({
@@ -67,6 +130,7 @@ const uploadCapturedImage = async (req, res) => {
         });
     }
 };
+
 
 // get all images of logged in user
 const getAllImagesByUser = async (req, res) => {

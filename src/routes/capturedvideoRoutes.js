@@ -5,16 +5,16 @@ const uploadVideo = require("../middleware/uploadVideoMiddleware");
 const { uploadCapturedVideo, getAllVideosByUser, getRecentVideoByUser, deleteCapturedVideo } = require("../controllers/capturedVideoController");
 
 
-// 🔹 Upload Video (max 5 sec validated inside controller)
+// Upload Video (max 5 sec validated inside controller)
 router.post(
     "/upload",
     authUser,
-    uploadVideo.single("video"), // field name must be "video" in Postman
+    uploadVideo.single("video"),
     uploadCapturedVideo
 );
 
 
-// 🔹 Get All Videos of Logged-in User
+// Get All Videos of Logged-in User
 router.get(
     "/all",
     authUser,
@@ -22,7 +22,7 @@ router.get(
 );
 
 
-// 🔹 Get Most Recent Video of Logged-in User
+// Get Most Recent Video of Logged-in User
 router.get(
     "/recent",
     authUser,
@@ -30,7 +30,7 @@ router.get(
 );
 
 
-// 🔹 Delete Video by ID
+// Delete Video by ID
 router.delete(
     "/:videoId",
     authUser,
