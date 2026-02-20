@@ -22,11 +22,11 @@ const uploadCapturedVideo = async (req, res) => {
             });
         }
 
-        // 🔥 TEMP FILE PATH
+        // TEMP FILE PATH
         const tempPath = path.join(os.tmpdir(), `${Date.now()}-${req.file.originalname}`);
         fs.writeFileSync(tempPath, req.file.buffer);
 
-        // 🔥 CHECK DURATION
+        // CHECK DURATION
         ffmpeg.ffprobe(tempPath, async (err, metadata) => {
             if (err) {
                 fs.unlinkSync(tempPath);
@@ -46,7 +46,7 @@ const uploadCapturedVideo = async (req, res) => {
                 });
             }
 
-            // ✅ If valid → Upload to Firebase
+            // If valid → Upload to Firebase
             const userId = req.user._id.toString();
             const timestamp = Date.now();
             const ext = path.extname(req.file.originalname);
@@ -69,7 +69,7 @@ const uploadCapturedVideo = async (req, res) => {
                 videoName: fileName,
             });
 
-            // 🔥 DELETE TEMP FILE
+            // DELETE TEMP FILE
             fs.unlinkSync(tempPath);
 
             return res.status(201).json({
